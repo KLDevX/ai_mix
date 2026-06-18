@@ -31,6 +31,7 @@ class StackFrontier():
             return node
 
 class QueueFrontier(StackFrontier):
+
     def remove(self):
         if self.empty():
             raise Exception("empty frontier")
@@ -71,15 +72,47 @@ class Maze():
                 except IndexError: ## Why?
                     row.append(False) 
             self.walls.append(row)
-        print(self.walls)
-        print(self.height, self.width)
+        
+        self.solution = None
+
+    def print(self):
+        # Если solution найдено, брать только решение, иначе None
+        solution = self.solution[1] if self.solution is not None else None
+        
+        # Система вывода в консоль
+        print()
+        for i, row in enumerate(self.walls):
+            for j, col in enumerate(row):
+
+                # col - проверка на стену (True/False)
+                if col:
+                    print("█", end="")
+                
+                # start
+                elif (i, j) == self.start:
+                    print("A", end="")
+
+                # goal
+                elif (i, j) == self.goal:
+                    print("B", end="")
+
+                # Если есть solution, проводит путь
+                # Иначе, рисует maze без решения
+                elif solution is not None and (i, j) in solution:
+                    print("*", end="")
+
+                # Пустые клетки
+                else:
+                    print(" ", end="")
+            print()
+        print()
 
     def neighbors(self, state):
-        row, col = state    # текущая клетка
+        row, col = state # текущая клетка
         candidates = [
-            ("up", (row-1, col))
-            ("down", (row+1, col))
-            ("left", (row, col-1))
+            ("up", (row-1, col)),
+            ("down", (row+1, col)),
+            ("left", (row, col-1)),
             ("right", (row, col+1))
         ]
 
@@ -90,5 +123,64 @@ class Maze():
                 result.append((action, (r,c)))
         return result
 
+    def solve(self):
+        """Находит решение пазла, если он существует"""
 
-Maze("maze1.txt")
+        # Создаём frontier и добавляем стартовую клетку
+        start = Node(state=self.start, parent=None, action=None)
+        frontier = StackFrontier()
+        frontier.add(start)
+
+        # Создать пустое хранилище изученных клеток
+        # Цель: не проверять уже изученные клетки
+        self.explored = set()
+
+        while True:
+
+            # Если изучили все возможные клетки, а выход не нашли, выводит ошибку
+            if frontier.empty():
+                raise Exception("no solution")
+
+            # Достать следующую клетку для изучения
+            node = frontier.remove()
+            
+            # Если клетка является выходом, значит мы нашли решение
+            if node.state == self.goal:
+                actions = []
+                cells = []
+                # Ищем начальную клетку
+                # Ex: Идем с конца по ссылкам parent, у начальной клетки parent = None
+                while node.parent is not None:
+                    actions.append(node.action) # Сохраняем действие
+                    cells.append(node.state) # Сохраняем координаты
+                    node = node.parent # Заменяем, и идем дальше
+
+                # Переворачиваем массивы, получается путь с начала до конца
+                actions.reverse()
+                cells.reverse()
+
+                # Сохраняем решение, и завершаем solve
+                self.solution = (actions, cells)
+                return
+
+            # Сохраняем координаты клетки как изученная
+            self.explored.add(node.state)
+
+            for action, state in self.neighbors(node.state):
+                if not frontier.contains_state(state) and state not in self.explored:
+                    child = Node(state=state, parent=node, action=action)
+                    frontier.add(child)
+
+if len(sys.argv) != 2:
+    sys.exit("Usage: python maze.py maze.txt")
+
+maze = Maze(sys.argv[1])
+
+print("Maze:")
+maze.print()
+
+print("Solving...")
+maze.solve()
+
+print("Solution:")
+maze.print()
