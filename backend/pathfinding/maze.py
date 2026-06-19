@@ -21,17 +21,19 @@ class StackFrontier():
 
     def empty(self):
         return len(self.frontier) == 0
-    
+
+    """DFS - Depth-First Search"""
     def remove(self):
         if self.empty():
             raise Exception("empty frontier")
-        else: ## why not use pop?
+        else:
             node = self.frontier[-1]
             self.frontier = self.frontier[:-1]
             return node
 
 class QueueFrontier(StackFrontier):
 
+    """BFS - Breadth-First Search"""
     def remove(self):
         if self.empty():
             raise Exception("empty frontier")
@@ -41,11 +43,18 @@ class QueueFrontier(StackFrontier):
             return node
 
 class Maze():
-    def __init__(self, filename):
-    
+    def __init__(self, filename, model):
         # Прочитать файл с пазлом
         with open(filename) as f:
             contents = f.read()
+
+        match model:
+            case "bfs":
+                self.engine = QueueFrontier
+            case "dfs":
+                self.engine = StackFrontier
+            case _:
+                raise Exception("wrong model")
 
         # Получить height и width пазла
         contents = contents.splitlines()
@@ -77,7 +86,11 @@ class Maze():
 
     def print(self):
         # Если solution найдено, брать только решение, иначе None
-        solution = self.solution[1] if self.solution is not None else None
+        if self.solution is not None:
+            solution = self.solution[1]
+            explored = self.explored
+        else: 
+            solution, explored = None, None
         
         # Система вывода в консоль
         print()
@@ -98,9 +111,13 @@ class Maze():
 
                 # Если есть solution, проводит путь
                 # Иначе, рисует maze без решения
-                elif solution is not None and (i, j) in solution:
-                    print("*", end="")
-
+                elif solution is not None:
+                    if (i, j) in solution:
+                        print('*', end="")
+                    elif (i, j) in explored:
+                        print("-", end="")
+                    else:
+                        print(" ", end="")
                 # Пустые клетки
                 else:
                     print(" ", end="")
@@ -126,9 +143,12 @@ class Maze():
     def solve(self):
         """Находит решение пазла, если он существует"""
 
+        # Счетчик изученных клеток
+        self.num_explored = 0
+
         # Создаём frontier и добавляем стартовую клетку
         start = Node(state=self.start, parent=None, action=None)
-        frontier = StackFrontier()
+        frontier = self.engine()
         frontier.add(start)
 
         # Создать пустое хранилище изученных клеток
@@ -143,6 +163,7 @@ class Maze():
 
             # Достать следующую клетку для изучения
             node = frontier.remove()
+            self.num_explored += 1
             
             # Если клетка является выходом, значит мы нашли решение
             if node.state == self.goal:
@@ -171,16 +192,21 @@ class Maze():
                     child = Node(state=state, parent=node, action=action)
                     frontier.add(child)
 
-if len(sys.argv) != 2:
-    sys.exit("Usage: python maze.py maze.txt")
+argv_len = len(sys.argv)
+if argv_len != 3:
+    sys.exit("Usage: python maze.py maze.txt dfs")
 
-maze = Maze(sys.argv[1])
+# Инициализация
+maze = Maze(sys.argv[1], sys.argv[2])
 
+# Вывод начального пазла
 print("Maze:")
 maze.print()
 
+# Процесс решения
 print("Solving...")
 maze.solve()
 
+# Вывод решения пазла
 print("Solution:")
 maze.print()
