@@ -162,10 +162,14 @@ class Maze():
         # Счетчик изученных клеток
         self.num_explored = 0
 
-        # Создаём frontier и добавляем стартовую клетку
+        # Создаём frontier для двух сторон и добавляем стартовую и целевую клетку
         start = Node(state=self.start, parent=None, action=None)
-        frontier = self.frontier_class()
-        frontier.add(start)
+        start_frontier = self.frontier_class()
+        start_frontier.add(start)
+
+        goal = Node(state=self.goal, parent=None, action=None)
+        goal_frontier = self.frontier_class()
+        goal_frontier.add(goal)
 
         # Создать пустое хранилище изученных клеток
         # Цель: не проверять уже изученные клетки
@@ -173,14 +177,15 @@ class Maze():
 
         while True:
 
-            # Если изучили все возможные клетки, а выход не нашли, выводит ошибку
-            if frontier.empty():
+            # Если изучили все возможные клетки для любого frontier, выводит ошибку
+            if start_frontier.empty() or goal_frontier.empty():
                 raise Exception("no solution")
 
             # Достать следующую клетку для изучения
-            node = frontier.remove()
+            node = start_frontier.remove()
             self.num_explored += 1
-            
+
+            print(start_frontier.frontier)
             # Если клетка является выходом, значит мы нашли решение
             if node.state == self.goal:
                 actions = []
